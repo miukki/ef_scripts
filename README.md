@@ -1,2 +1,2 @@
-ef_scripts
+example prototyping data over model.js
 ==========
