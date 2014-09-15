@@ -50,57 +50,41 @@ define([
     'sig/render': function(data) {
       var me = this;
 
-      Config.blurb['639152'] = blurbData(Config.blurb['639152'], _.assign(data, {'curLevel' : data.currentLevelNo, 'targetLevel': data.targetLevelNo}));
+      Config.blurb['639152'] = blurbData(Config.blurb['639152'], _.assign({'curLevel' : data.currentLevelNo, 'targetLevel': data.targetLevelNo}, data));
       me.html(template, _.assign({}, data, Config)).done(function() {
         // render and call toggleBar
-        toggleBar(me);
+        if (!data.isEmpty) { //if all-types are empty i not show up block
+          toggleBar(me);
+        }
       });
 
     },
 
     'sig/start': function() {
       var me = this;
-      var data = {};//clean data
+      var data = {};
 
-      me.query('studytarget!current').spread(function(result) {//[1 step] get CurLevel, get targetLevelNo, get total units-done
-
-        console.log('RESULT', result);
-
-
+      me.query('studytarget!current').spread(function(result) {//[1 step] get {params data}
         data = new model.Data(result);
 
-        return me.query('enrollable_courses!current');
-
+        return me.query('enrollable_courses!current'); //[2 step] get {items} for  GE,BE,IE
       }).spread(function(result) {
+        data.groups({groups: result.groups});
 
-        data = new model.Data(_.assign(data, {groups: result.groups})); //[2 step] get all groups- GE, BE, IE
-
-        return me.grabDataUnits(data.rowsGE, data.groups[0], data.currentLevelNo); //[3 step] get units-GE
-
+        return me.grabDataUnits(data, 0); //[3 step] get {array units for GE}
       }).then(function(result) {
+        data.setLevels(_.assign(data, {'levelsGE': result}));
 
-        data = new model.Data(_.assign(data, {'levelsGE': result}))
-
-        return me.grabDataUnits(data.rowsBE, data.groups[1], data.currentLevelNo); //[4 step] grab data units-BE
-
+        return me.grabDataUnits(data, 1); //[4 step] get {array units for BE}
         }).then(function(result) {
+          data.setLevels(_.assign(data, {'levelsBE': result}));
 
-
-          data = new model.Data(_.assign(data, {'levelsBE': result}))
-
-
-          return me.grabDataUnits(data.rowsIE, data.groups[2], data.currentLevelNo, data.industryEnglishAutoEnrolledUnit); //[5 step] grab data units-IE
-
+          return me.grabDataUnits(data, 2); //[5 step] get {array units for IE(INDB2B)}
         }).then(function(result) {
-
-
-          data = new model.Data(_.assign(data, {'levelsIE': result}))
+          data.setLevels(_.assign(data, {'levelsIE': result}));
 
           console.log('DATA', data);
-
-
           me.signal('render', data);
-
         });
 
     },
@@ -110,8 +94,14 @@ define([
     'dom:.slidedown/click': function(e) {
       toggleBar(e, 'down');
     },
-    'grabDataUnits': function(rows, result, curlvl, node_id_IND) {
+    'grabDataUnits': function(data, type) {
       var me = this;
+
+      var rows = data[['rowsGE', 'rowsBE', 'rowsIE'][type]];
+      var result = data.groups[type];
+      var curlvl = data.currentLevelNo;
+      var node_id_IND = data.industryEnglishAutoEnrolledUnit;
+
       var deferred = when.defer();
       var i = 0;
       var arr = [];
@@ -119,7 +109,7 @@ define([
 
       (function rowFn(i) { //each rows
 
-        if (!node_id_IND && (!rows || i >= rows)) { //for all
+        if (!node_id_IND && (!rows || i >= rows)) { //for all, for node_id_IND possible that (rows == 0)
           return deferred.resolve(arr);
         } else if (curlvl <= 5 && (code === 'BE' || code === 'INDB2B')) { //if current_Level <= 5, not display  BE, IND
           return deferred.resolve(arr);
@@ -138,6 +128,9 @@ define([
           if (Array.isArray(res[0].mergedUnits)) {
             res[0].mergedUnits.map(function(item){
               obj.units.push(Number(item.progressState));
+              if (item.progressState === 4) {
+                data.curUnit++;
+              }
             })
           }
 

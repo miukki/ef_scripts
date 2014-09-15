@@ -16,38 +16,43 @@ define(['lodash'], function (_) {
     return (undefined !== str) ? String(str) : '';
   }
 
+  var Data = function(obj) {
+    obj = Obj(obj);
+
+    this.currentLevelNo = Num(obj.currentLevelNo);
+    this.targetLevelNo = Num(obj.targetLevelNo);
+
+    this.businessSpinTarget = Num(obj.businessSpinTarget);
+    this.generalEnglishTarget = Num(obj.generalEnglishTarget);
+
+    this.industrySpinTarget = Num(obj.industrySpinTarget);
+    this.industryEnglishAutoEnrolledUnit = Num(obj.industryEnglishAutoEnrolledUnit); // 2524 <-- for test;
+
+    this.totalUnit = this.businessSpinTarget + this.generalEnglishTarget + this.industrySpinTarget;
+    this.curUnit = Num(obj.curUnit);
+
+    var num = Math.abs(this.targetLevelNo - this.currentLevelNo); //points beetween targetLevelNo and currentLevelNo
+    this.rowsGE = !num ? num : num + 1; //for array i need it
+    this.rowsBE = Math.ceil(this.businessSpinTarget/3); //for array i need it
+    this.rowsIE = this.industrySpinTarget; //for array i need it
+  }
+
+  Data.prototype.groups = function(obj) {
+    obj = Obj(obj);
+    this.groups = Arr(obj.groups);
+  }
+
+  Data.prototype.setLevels = function(obj) {
+    obj = Obj(obj);
+    this.levelsGE = Arr(obj.levelsGE);
+    this.levelsBE = Arr(obj.levelsBE);
+    this.levelsIE = Arr(obj.levelsIE); //this.currentLevelNo > 1 && !(this.industrySpinTarget
+
+    this.isEmpty = !this.levelsGE.length && !this.levelsBE.length && !this.levelsIE.length; // if no data, won't appear bar
+  }
 
   return {
-
-    'Data': function(obj) {
-      obj = Obj(obj);
-      this.currentLevelNo = Num(obj.currentLevelNo);
-      this.targetLevelNo = Num(obj.targetLevelNo);
-
-
-      this.businessSpinTarget = Num(obj.businessSpinTarget);
-      this.generalEnglishTarget = Num(obj.generalEnglishTarget);
-
-      this.industrySpinTarget = Num(obj.industrySpinTarget);
-      this.industryEnglishAutoEnrolledUnit = Num(obj.industryEnglishAutoEnrolledUnit); // 2524 <-- for test;
-
-      this.totalUnit = this.businessSpinTarget + this.generalEnglishTarget + this.industrySpinTarget;
-      this.curUnit = Num(obj.curUnit);
-
-      this.groups = Arr(obj.groups);
-
-      this.num = Math.abs(this.targetLevelNo - this.currentLevelNo); //points beetween targetLevelNo and currentLevelNo
-
-      this.rowsGE = !this.num ? this.num : this.num + 1; //for array i need it
-      this.rowsBE = Math.ceil(this.businessSpinTarget/3); //for array i need it
-      this.rowsIE = this.industrySpinTarget; //for array i need it
-
-      this.levelsGE = Arr(obj.levelsGE);
-      this.levelsBE = Arr(obj.levelsBE);
-      this.levelsIE = Arr(obj.levelsIE); //this.currentLevelNo > 1 && !(this.industrySpinTarget
-
-    }
-
+    'Data': Data
   };
 
 
